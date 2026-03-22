@@ -53,6 +53,6 @@ tf = transforms.Compose([transforms.Normalize(mean=[0, 0, 0], std=[1 / s for s i
                         transforms.CenterCrop(224)])
 
 plt.figure()
-plt.imshow(tf(pert_image.cpu()[0]))
+plt.imshow(tf(pert_image.cpu()))
 plt.title(str_label_pert)
 plt.show()

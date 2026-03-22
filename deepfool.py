@@ -22,7 +22,15 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
     else:
         print("UsingCPU")
 
-    f_image=net.forward(Variable(image[None,:,:,:],requires_grad=True)).data.cpu().numpy().flatten()
+    # Accept both [C,H,W] and [1,C,H,W] inputs.
+    if image.dim() == 4:
+        if image.size(0) != 1:
+            raise ValueError("deepfool expects a single image, got batch size {}".format(image.size(0)))
+        image = image[0]
+    elif image.dim() != 3:
+        raise ValueError("deepfool expects input shape [C,H,W] or [1,C,H,W]")
+
+    f_image=net.forward(Variable(image.unsqueeze(0),requires_grad=True)).data.cpu().numpy().flatten()
     I=(np.array(f_image)).flatten().argsort()[::-1]
     I=I[0:num_classes]
     label=I[0]
@@ -34,7 +42,7 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
 
     loop_i=0
 
-    x=Variable(pert_image[None,:],requires_grad=True)
+    x=Variable(pert_image.unsqueeze(0),requires_grad=True)
     fs=net.forward(x)
     fs_list=[fs[0,I[k]] for k in range(num_classes)]
     k_i=label
@@ -43,12 +51,12 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
         pert=np.inf
         zero_gradients(x)
         fs[0,I[0]].backward(retain_graph=True)
-        grad_orig=x.grad.data.cpu().numpy().copy()
+        grad_orig=x.grad.data.cpu().numpy().copy()[0]
 
         for k in range(1,num_classes):
             zero_gradients(x)
             fs[0,I[k]].backward(retain_graph=True)
-            cur_grad=x.grad.data.cpu().numpy().copy()
+            cur_grad=x.grad.data.cpu().numpy().copy()[0]
             
             w_k=cur_grad-grad_orig
             f_k=(fs[0,I[k]]-fs[0,I[0]]).data.cpu().numpy()
@@ -68,7 +76,7 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
             pert_image=image+ (1+overshoot)*torch.from_numpy(r_tot)
 
 
-        x=Variable(pert_image[None,:],requires_grad=True)
+        x=Variable(pert_image.unsqueeze(0),requires_grad=True)
         fs=net.forward(x)
         k_i=np.argmax(fs.data.cpu().numpy().flatten())
         loop_i+=1
