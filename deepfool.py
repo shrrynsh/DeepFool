@@ -44,4 +44,31 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
             fs[0,I[k]].backward(retain_graph=True)
             cur_grad=x.grad.data.cpu().numpy().copy()
             
-                   
+            w_k=cur_grad-grad_orig
+            f_k=(fs[0,I[k]]-fs[0,I[0]]).data.cpu().numpy()
+            pert_k=abs(f_k)/np.linalg.norm(w_k.flatten())
+
+            if pert_k<pert:
+                pert=pert_k
+                w=w_k
+
+
+        r_i=(pert+1e-4)*w/np.linalg.norm(w) 
+        r_tot=np.float32(r_tot+r_i)                  
+
+        if is_cuda:
+            pert_image=image+ (1+overshoot)*torch.from_numpy(r_tot).cuda()
+        else:
+            pert_iamge=image+ (1+overshoot)*torch.from_numpy(r_tot)
+
+
+        x=Varaible(pert_image,requires_grad=True)
+        fs=net.forwrad(x)
+        k_i=np.argmax(fs.data.cpu().numpy().flatten())
+        loop_i+=1
+
+    r_tot=(1+overshoot)*r_tot
+
+    return r_tot,loop_i,label,k_i,pert_image
+
+    
