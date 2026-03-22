@@ -34,3 +34,8 @@ r,loop_i,label_orig,label_pert,pert_image=deepfool(im,net)
 labels = open(os.path.join('synset_words.txt'), 'r').read().split('\n')
 
 
+str_label_orig = labels[np.int(label_orig)].split(',')[0]
+str_label_pert = labels[np.int(label_pert)].split(',')[0]
+
+print("Original label = ", str_label_orig)
+print("Perturbed label = ", str_label_pert)
