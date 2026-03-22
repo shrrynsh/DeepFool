@@ -16,13 +16,13 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
     is_cuda=torch.cuda.is_available()
     if is_cuda:
         print("Using GPU")
-        image=image.cuda
+        image=image.cuda()
         net=net.cuda()
 
     else:
         print("UsingCPU")
 
-    f_image=net.forward(Variable(image[None,:,:,:],requires_grad=True)).data.cpu().numpy.flatten()
+    f_image=net.forward(Variable(image[None,:,:,:],requires_grad=True)).data.cpu().numpy().flatten()
     I=(np.array(f_image)).flatten().argsort()[::-1]
     I=I[0:num_classes]
     label=I[0]
@@ -41,6 +41,7 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
 
     while k_i ==label and loop_i < max_iter:
         pert=np.inf
+        zero_gradients(x)
         fs[0,I[0]].backward(retain_graph=True)
         grad_orig=x.grad.data.cpu().numpy().copy()
 
@@ -64,11 +65,11 @@ def deepfool(image,net,num_classes=10,overshoot=0.02,max_iter=50):
         if is_cuda:
             pert_image=image+ (1+overshoot)*torch.from_numpy(r_tot).cuda()
         else:
-            pert_iamge=image+ (1+overshoot)*torch.from_numpy(r_tot)
+            pert_image=image+ (1+overshoot)*torch.from_numpy(r_tot)
 
 
-        x=Varaible(pert_image,requires_grad=True)
-        fs=net.forwrad(x)
+        x=Variable(pert_image[None,:],requires_grad=True)
+        fs=net.forward(x)
         k_i=np.argmax(fs.data.cpu().numpy().flatten())
         loop_i+=1
 
